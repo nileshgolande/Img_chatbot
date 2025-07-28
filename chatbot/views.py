@@ -17,7 +17,7 @@ model, preprocess = clip.load("ViT-B/32")
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model.to(device)
 
-genai.configure(api_key=os.getenv("AIzaSyAXI0OPF6Xh_XTmPkW4dUmFQRBm5d7Hfhk"))
+# genai.configure(api_key=os.getenv("your_key"))  //add your api key here
 
 def home(request):
     """
