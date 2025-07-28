@@ -1,0 +1,150 @@
+    <!DOCTYPE html>
+<html>
+<head>
+    <title>Image Recognition Chatbot</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+            color: #333;
+        }
+
+        h2, h3 {
+            color: #2c3e50;
+        }
+
+        form {
+            background-color: #ffffffdd;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(to right, #43e97b, #38f9d7);
+        }
+
+        .chat-box {
+            border: 1px solid #ddd;
+            background-color: #fff;
+            border-radius: 10px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+        }
+
+        .user-msg {
+            color: #007BFF;
+        }
+
+        .bot-msg {
+            color: #28a745;
+        }
+
+        img {
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            margin-bottom: 10px;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid #eee;
+            margin: 10px 0;
+        }
+
+        ::placeholder {
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+<h2>Upload an Image</h2>
+<form method="post" enctype="multipart/form-data" id="upload-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Upload</button>
+</form>
+
+{% if image %}
+<hr>
+<h3>Uploaded Image:</h3>
+<img src="{{ image.image.url }}" alt="Uploaded Image" width="300" />
+<p><strong>Description:</strong> {{ image.description }}</p>
+
+<h3>Chat about this image:</h3>
+<div class="chat-box" id="chat-box">
+    {% for chat in chats %}
+        <p><span class="user-msg"><strong>You:</strong> {{ chat.user_message }}</span></p>
+        <p><span class="bot-msg"><strong>Bot:</strong> {{ chat.bot_response }}</span></p>
+        <hr>
+    {% endfor %}
+</div>
+
+<form id="chat-form">
+    {% csrf_token %}
+    <input type="hidden" id="image_id" value="{{ image.id }}">
+    <input type="text" id="message" placeholder="Ask a question about the image..." required style="width: 70%;">
+    <button type="submit">Send</button>
+</form>
+{% endif %}
+
+<script>
+document.getElementById('chat-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const messageInput = document.getElementById('message');
+    const chatBox = document.getElementById('chat-box');
+    const imageId = document.getElementById('image_id').value;
+    const message = messageInput.value.trim();
+    if (!message) return;
+
+    // Show user message immediately
+    chatBox.innerHTML += `<p><span class="user-msg"><strong>You:</strong> ${message}</span></p>`;
+
+    // Clear input
+    messageInput.value = '';
+    chatBox.scrollTop = chatBox.scrollHeight;
+
+    // Send to backend
+    const response = await fetch("{% url 'chat_api' %}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+        body: JSON.stringify({image_id: imageId, message: message})
+    });
+    const data = await response.json();
+    if (data.bot_reply) {
+        chatBox.innerHTML += `<p><span class="bot-msg"><strong>Bot:</strong> ${data.bot_reply}</span></p><hr>`;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    } else if (data.error) {
+        chatBox.innerHTML += `<p style="color:red;"><strong>Error:</strong> ${data.error}</p><hr>`;
+    }
+});
+</script>
+
+</body>
+</html>
